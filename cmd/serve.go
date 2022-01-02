@@ -44,6 +44,8 @@ var serveCmd = &cobra.Command{
 	},
 }
 
+// Special thanks to:
+// https://github.com/openshift/osin/blob/master/example/goauth2client/goauth2client.go
 func runServeCmd() {
 	// create http muxes
 	clienthttp := http.NewServeMux()
@@ -75,30 +77,10 @@ func runServeCmd() {
 		w.Write([]byte(fmt.Sprintf("<a href=\"%s\">Login</a>", u.String())))
 	})
 
-	// Auth endpoint
-	clienthttp.HandleFunc("/appauth", func(w http.ResponseWriter, r *http.Request) {
-		// parse a token request
-		areqdata, err := areq.HandleRequest(r)
-		if err != nil {
-			w.Write([]byte(fmt.Sprintf("ERROR: %s\n", err)))
-			return
-		}
-
-		treq := client.NewAccessRequest(osincli.AUTHORIZATION_CODE, areqdata)
-
-		// show access request url (for debugging only)
-		u2 := treq.GetTokenUrl()
-		w.Write([]byte(fmt.Sprintf("Access token URL: %s\n", u2.String())))
-
-		// exchange the authorize token for the access token
-		ad, err := treq.GetToken()
-		if err != nil {
-			w.Write([]byte(fmt.Sprintf("ERROR: %s\n", err)))
-			return
-		}
-		w.Write([]byte(fmt.Sprintf("Access token: %+v\n", ad)))
-	})
-
+	// Redirect URL that the oAuth 2.0 will send to upon successful
+	// authorization from the user. This page will receive the authorization
+	// code from the server which we can then save in our application and
+	// therefore make calls to the resource server on behalf of the client.
 	clienthttp.HandleFunc("/appauth/code", func(w http.ResponseWriter, r *http.Request) {
 		// Parse the URL path to extract our URL parameters that were attached
 		// by the oAuth 2.0 server to this API endpoint.
@@ -131,7 +113,7 @@ func runServeCmd() {
 
 		// if parse, download and parse json
 		if r.FormValue("doparse") == "1" {
-			err := utils.DownloadAccessToken(fullURL, &osin.BasicAuth{ClientID, ClientSecret}, jr)
+			err := utils.DownloadAccessToken(fullURL, &osin.BasicAuth{Username: ClientID, Password: ClientSecret}, jr)
 			if err != nil {
 				w.Write([]byte(err.Error()))
 				w.Write([]byte("<br/>"))
@@ -148,6 +130,13 @@ func runServeCmd() {
 			w.Write([]byte(fmt.Sprintf("ACCESS TOKEN: %s<br/>\n", at)))
 		}
 
+		// PLEASE NOTE THAT THAT WE ARE PRINTING THE RESULTS TO THE WEB PAGE HERE
+		// HOWEVER IN PRACTISE YOUR APP CAN SAVE THE ACCESS/REFRESH TOKENS AND
+		// START OPERATING.
+		//
+		// EX:
+		// accessToken = jr["access_token"]
+		//
 		w.Write([]byte(fmt.Sprintf("FULL RESULT: %+v<br/>\n", jr)))
 
 		// output links
