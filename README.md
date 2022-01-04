@@ -24,7 +24,7 @@ go run main.go serve --client_id=thirdparty \
                      --client_secret=pleasechange \
                      --redirect_uri=http://127.0.0.1:8001/appauth/code \
                      --authorize_uri=http://localhost:8000/authorize \
-                     --token_url=http://localhost:8000/authorize
+                     --token_url=http://localhost:8000/token
 
 ```
 
